@@ -4,7 +4,6 @@ import com.avoworld.entity.User;
 import com.avoworld.jwt.JWTUtil;
 import com.avoworld.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -19,10 +18,6 @@ public class AuthService {
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private Set<String> tokenBlacklist = new HashSet<>();
 
-    @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
-
-    private static final String BLACKLIST_PREFIX = "blacklist:";
 
     @Autowired
     public AuthService(UserRepository userRepository, JWTUtil jwtUtil, BCryptPasswordEncoder bCryptPasswordEncoder) {
@@ -53,11 +48,11 @@ public class AuthService {
     }
 
     public void invalidateToken(String token) {
-        redisTemplate.opsForValue().set(BLACKLIST_PREFIX + token, true);
+        tokenBlacklist.add(token);
     }
 
     public boolean isTokenBlacklisted(String token) {
-        return Boolean.TRUE.equals(redisTemplate.hasKey(BLACKLIST_PREFIX + token));
+        return tokenBlacklist.contains(token);
     }
 
     public boolean isTokenValid(String token) {

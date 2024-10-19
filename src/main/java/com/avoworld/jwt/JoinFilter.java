@@ -4,6 +4,7 @@ import com.avoworld.dto.CustomUserDetails;
 import com.avoworld.entity.User;
 import com.avoworld.service.AuthService;
 import com.avoworld.service.FileStorageService;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -52,16 +53,6 @@ public class JoinFilter extends AbstractAuthenticationProcessingFilter {
 
         MultipartHttpServletRequest multipartRequest = new StandardServletMultipartResolver().resolveMultipart(request);
         MultipartFile file = multipartRequest.getFile("file");
-//        MultipartFile dataFile = multipartRequest.getFile("data");
-
-
-        // 로그 추가
-//        multipartRequest.getParameterMap().forEach((key, value) -> {
-//            System.out.println("Parameter name: " + key);
-//            for (String val : value) {
-//                System.out.println("Value: " + val);
-//            }
-//        });
 
         // 'data' 파라미터를 Blob 형태로 수신하여 JSON으로 변환
         String data;
@@ -79,11 +70,10 @@ public class JoinFilter extends AbstractAuthenticationProcessingFilter {
 
         Map<String, String> userMap;
         try {
-            userMap = new ObjectMapper().readValue(data, HashMap.class);
+            userMap = new ObjectMapper().readValue(data, new TypeReference<Map<String, String>>() {});
         } catch (IOException e) {
             throw new ServletException("Failed to read request payload", e);
         }
-
 
         String email = userMap.get("email");
         String password = userMap.get("password");
@@ -95,8 +85,7 @@ public class JoinFilter extends AbstractAuthenticationProcessingFilter {
         newUser.setNickname(nickname);
 
         if (file != null && !file.isEmpty()) {
-            String filename = fileStorageService.store(file);
-            String fileDownloadUri = fileStorageService.getFileUrl(filename);
+            String fileDownloadUri = fileStorageService.store(file);
             newUser.setProfilePicture(fileDownloadUri);
         }
 

@@ -50,6 +50,7 @@ public class AuthController {
         }
     }
 
+    // 로그아웃 다시
     @PostMapping("/logout")
     public ResponseEntity<Map<String, Object>> logout(@RequestHeader("Authorization") String token) {
         try {

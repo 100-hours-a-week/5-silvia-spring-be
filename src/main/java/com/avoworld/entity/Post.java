@@ -44,6 +44,8 @@ public class Post {
     @Column(name = "likes")
     private int likes;
 
+    private String fileUrl;
+
     @Column(name = "create_at", nullable = false, updatable = false)
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")

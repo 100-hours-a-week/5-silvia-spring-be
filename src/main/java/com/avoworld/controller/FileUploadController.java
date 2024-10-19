@@ -30,9 +30,11 @@ public class FileUploadController {
     @PostMapping
     public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file) {
         try {
-            String filename = fileStorageService.store(file);
-            String fileDownloadUri = fileStorageService.getFileUrl(filename);
+            validateFile(file);
+            String fileDownloadUri = fileStorageService.store(file);
             return ResponseEntity.ok(fileDownloadUri);
+        } catch (FileValidationException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid file: " + e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Could not upload the file: " + e.getMessage());
         }
@@ -46,7 +48,7 @@ public class FileUploadController {
 
             if (resource.exists() && resource.isReadable()) {
                 return ResponseEntity.ok()
-                        .contentType(MediaType.parseMediaType("application/octet-stream"))
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
                         .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
                         .body(resource);
             } else {
@@ -62,14 +64,29 @@ public class FileUploadController {
     @PostMapping("/profile-picture")
     public ResponseEntity<Map<String, String>> uploadProfilePicture(@RequestParam("file") MultipartFile file) {
         try {
-            String filename = fileStorageService.store(file);
-            String fileDownloadUri = fileStorageService.getFileUrl(filename);
+            validateFile(file);
+            String fileDownloadUri = fileStorageService.store(file);
 
             Map<String, String> response = new HashMap<>();
             response.put("url", fileDownloadUri);
             return ResponseEntity.ok(response);
+        } catch (FileValidationException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Invalid file: " + e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Could not upload profile picture: " + e.getMessage()));
         }
+    }
+
+    private void validateFile(MultipartFile file) throws FileValidationException {
+        if (file.isEmpty()) {
+            throw new FileValidationException("File is empty");
+        }
+        // Add more validation logic (e.g., file type, size)
+    }
+}
+
+class FileValidationException extends RuntimeException {
+    public FileValidationException(String message) {
+        super(message);
     }
 }

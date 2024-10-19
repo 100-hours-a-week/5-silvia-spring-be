@@ -23,6 +23,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.Collections;
 
 @Configuration
@@ -50,12 +51,12 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         AuthenticationManager authenticationManager = authenticationManager(http.getSharedObject(AuthenticationConfiguration.class));
+
         http.csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .formLogin(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/login", "/", "/api/join", "api/accounts/check-email", "/uploads/**", "api/posts/**").permitAll()
-                        .requestMatchers("/api/upload/**").permitAll()
+                        .requestMatchers("/api/login", "/", "/api/join", "/api/accounts/check-email", "/api/posts/**").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(new LoginFilter("/api/login", authenticationManager, jwtUtil), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(new JoinFilter("/api/join", authenticationManager, authService, jwtUtil, fileStorageService), UsernamePasswordAuthenticationFilter.class)
@@ -72,7 +73,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Collections.singletonList("http://localhost:3000"));
+        configuration.setAllowedOrigins(Arrays.asList(
+                "http://avoworld-bucket.s3-website.ap-northeast-2.amazonaws.com",
+                "http://localhost:3000",
+                "https://d1jlocd3s0jxr6.cloudfront.net",
+                "http://d1jlocd3s0jxr6.cloudfront.net"));
         configuration.setAllowedMethods(Collections.singletonList("*"));
         configuration.setAllowCredentials(true);
         configuration.setAllowedHeaders(Collections.singletonList("*"));

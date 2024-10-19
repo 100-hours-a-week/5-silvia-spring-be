@@ -1,6 +1,7 @@
 package com.avoworld.jwt;
 
 import com.avoworld.dto.CustomUserDetails;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,7 +15,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 
 public class LoginFilter extends AbstractAuthenticationProcessingFilter {
@@ -38,7 +38,7 @@ public class LoginFilter extends AbstractAuthenticationProcessingFilter {
 
         Map<String, String> credentials;
         try {
-            credentials = new ObjectMapper().readValue(request.getInputStream(), HashMap.class);
+            credentials = new ObjectMapper().readValue(request.getInputStream(), new TypeReference<Map<String, String>>() {});
         } catch (IOException e) {
             throw new ServletException("Failed to read request payload", e);
         }
@@ -77,5 +77,4 @@ public class LoginFilter extends AbstractAuthenticationProcessingFilter {
         res.setStatus(401);
         System.out.println("failure");
     }
-
 }

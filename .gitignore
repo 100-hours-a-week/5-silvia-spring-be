@@ -42,4 +42,6 @@ out/
 properties/env.properties
 /resources/property/env.properties
 src/main/resources/property/env.properties
+src/main/resources/keystore.p12
+/resources/keystore.p12
 #src/main/resources/application.properties

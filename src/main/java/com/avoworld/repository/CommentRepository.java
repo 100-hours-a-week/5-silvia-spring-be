@@ -54,7 +54,7 @@ public class CommentRepository {
 
     public void update(Comment comment) {
         String sql = "UPDATE post_comment SET comment_content = ?, edited_comment_content = ?, update_at = ? WHERE id = ?";
-        jdbcTemplate.update(sql, comment.getCommentContent(), comment.getEditedCommentContent(), comment.getUpdateAt(), comment.getId());
+        jdbcTemplate.update(sql, comment.getCommentContent(), comment.getEditedCommentContent(),  LocalDateTime.now(), comment.getId());
     }
 }
 

@@ -1,10 +1,14 @@
 package com.avoworld.controller;
 
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.CannedAccessControlList;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.avoworld.entity.Post;
 import com.avoworld.entity.Comment;
 import com.avoworld.service.PostService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,15 +26,19 @@ import java.util.stream.Collectors;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-
 @RestController
 @RequestMapping("/api/posts")
 public class PostController {
 
+    private final AmazonS3 s3Client;
     private final PostService postService;
     private final ObjectMapper objectMapper;
 
-    public PostController(PostService postService, ObjectMapper objectMapper) {
+    @Value("${cloud.aws.s3.bucket}")
+    private String bucketName;
+
+    public PostController(AmazonS3 s3Client, PostService postService, ObjectMapper objectMapper) {
+        this.s3Client = s3Client;
         this.postService = postService;
         this.objectMapper = objectMapper;
     }
@@ -52,33 +60,9 @@ public class PostController {
 
     @PostMapping(consumes = "multipart/form-data")
     public ResponseEntity<String> createPost(@RequestParam("file") MultipartFile file, @RequestParam("data") MultipartFile data) throws IOException, ServletException {
-        String postJson;
-        try (InputStream inputStream = data.getInputStream();
-             InputStreamReader reader = new InputStreamReader(inputStream);
-             BufferedReader bufferedReader = new BufferedReader(reader)) {
-            postJson = bufferedReader.lines().collect(Collectors.joining("\n"));
-        }
-
-        System.out.println("Data parameter value: " + postJson);
-
-        if (postJson == null || postJson.isEmpty()) {
-            throw new ServletException("Data parameter is missing");
-        }
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        JavaTimeModule javaTimeModule = new JavaTimeModule();
-        javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ISO_DATE_TIME));
-        objectMapper.registerModule(javaTimeModule);
-        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
-        Post post;
-        try {
-            post = objectMapper.readValue(postJson, Post.class);
-        } catch (IOException e) {
-            throw new ServletException("Failed to read request payload", e);
-        }
-
-        postService.createPost(post, file);
+        String postJson = extractJsonFromFile(data);
+        Post post = parsePostJson(postJson);
+        postService.createPost(post, file);  // Updated to pass both post and file
         return ResponseEntity.ok("Post created successfully");
     }
 
@@ -91,7 +75,7 @@ public class PostController {
         post.setId(postId.intValue());
 
         if (file != null && !file.isEmpty()) {
-            postService.updatePost(post, file);
+            postService.updatePost(post, file);  // Updated to pass both post and file
         } else {
             postService.updatePostWithoutFile(post, postPicture);
         }
@@ -115,19 +99,22 @@ public class PostController {
 
     private Post parsePostJson(String postJson) throws IOException {
         ObjectMapper objectMapper = new ObjectMapper();
+        JavaTimeModule javaTimeModule = new JavaTimeModule();
+        javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ISO_DATE_TIME));
+        objectMapper.registerModule(javaTimeModule);
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         return objectMapper.readValue(postJson, Post.class);
     }
 
-//    @PutMapping("/{postId}/views")
-//    public void incrementPostViews(@PathVariable("postId") Long postId) {
-//        postService.incrementPostViews(postId);
-//    }
+    @PutMapping("/{postId}/views")
+    public void incrementPostViews(@PathVariable("postId") Long postId) {
+        postService.incrementPostViews(postId);
+    }
 
     @GetMapping("/{postId}/comments")
     public List<Comment> getCommentsByPostId(@PathVariable("postId") Long postId) {
         return postService.getCommentsByPostId(postId);
     }
-
 
     @PostMapping("/{postId}/comments")
     public void createComment(@PathVariable("postId") Long postId, @RequestBody Comment comment) {
@@ -136,7 +123,7 @@ public class PostController {
     }
 
     @PutMapping("/{postId}/comments/{commentId}")
-    public void updateComment(@PathVariable("commentId") Long postId, @PathVariable("commentId") Long commentId, @RequestBody Comment comment) {
+    public void updateComment(@PathVariable("postId") Long postId, @PathVariable("commentId") Long commentId, @RequestBody Comment comment) {
         comment.setId(commentId.intValue());
         comment.setPostId(postId.intValue());
         postService.updateComment(comment);
@@ -146,16 +133,4 @@ public class PostController {
     public void deleteComment(@PathVariable("commentId") Long commentId) {
         postService.deleteComment(commentId);
     }
-
-//    @PostMapping("/{postId}/image")
-//    public String uploadPostImage(@PathVariable("postId") Long postId, @RequestParam("postImage") MultipartFile postImage) throws IOException {
-//        if (postImage.isEmpty()) {
-//            throw new IllegalArgumentException("No file uploaded");
-//        }
-//        String fileName = System.currentTimeMillis() + "-" + postImage.getOriginalFilename();
-//        String uploadDir = "uploads/";
-//        Files.createDirectories(Paths.get(uploadDir));
-//        Files.write(Paths.get(uploadDir + fileName), postImage.getBytes());
-//        return "/uploads/" + fileName;
-//    }
 }

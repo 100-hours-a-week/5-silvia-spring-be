@@ -3,7 +3,6 @@ package com.avoworld.service;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import jakarta.annotation.PostConstruct;
 import java.io.File;
@@ -51,21 +50,16 @@ public class FileStorageService {
     }
 
     public String store(MultipartFile file) {
-        String filename = UUID.randomUUID().toString() + "-" + file.getOriginalFilename();
+        String filename = UUID.randomUUID().toString() + "-" + sanitizeFilename(file.getOriginalFilename());
         try {
             if (file.isEmpty()) {
                 throw new RuntimeException("Failed to store empty file.");
             }
 
-            if (filename.contains("..")) {
-                // This is a security check
-                throw new RuntimeException("Cannot store file with relative path outside current directory " + filename);
-            }
-
             File convertedFile = convert(file, filename);
-            String uploadImageUrl = putS3(convertedFile, filename);
+            String s3Url = putS3(convertedFile, filename);
             removeNewFile(convertedFile);
-            return uploadImageUrl;
+            return s3Url;
         } catch (IOException e) {
             logger.error("Failed to store file: {}", e.getMessage());
             throw new RuntimeException("Failed to store file: " + e.getMessage(), e);
@@ -76,29 +70,22 @@ public class FileStorageService {
         return rootLocation.resolve(filename);
     }
 
-    public String getFileUrl(String filename) {
-        return ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path("/uploads/")
-                .path(filename)
-                .toUriString();
-    }
-
     public String saveProfileImage(MultipartFile profileImg) throws IOException {
         return store(profileImg);
     }
 
     private File convert(MultipartFile file, String filename) throws IOException {
-        File convertFile = new File(filename);
+        File convertFile = new File(System.getProperty("java.io.tmpdir"), filename);
         if (convertFile.createNewFile()) {
             try (FileOutputStream fos = new FileOutputStream(convertFile)) {
                 fos.write(file.getBytes());
             } catch (IOException e) {
-                logger.error("파일 변환 중 오류 발생: {}", e.getMessage());
+                logger.error("Error occurred while converting file: {}", e.getMessage());
                 throw e;
             }
             return convertFile;
         }
-        throw new IllegalArgumentException(String.format("파일 변환에 실패했습니다. %s", filename));
+        throw new IllegalArgumentException(String.format("Failed to convert file: %s", filename));
     }
 
     private String putS3(File uploadFile, String fileName) {
@@ -109,15 +96,18 @@ public class FileStorageService {
 
     private void removeNewFile(File targetFile) {
         if (targetFile.delete()) {
-            logger.info("파일이 삭제되었습니다.");
+            logger.info("File deleted successfully.");
         } else {
-            logger.info("파일이 삭제되지 못했습니다.");
+            logger.info("Failed to delete file.");
         }
+    }
+
+    private String sanitizeFilename(String filename) {
+        return filename.replaceAll("[^a-zA-Z0-9.-]", "_");
     }
 
     public void deleteFile(String fileName) {
         try {
-            // URL 디코딩을 통해 원래의 파일 이름을 가져옵니다.
             String decodedFileName = java.net.URLDecoder.decode(fileName, "UTF-8");
             logger.info("Deleting file from S3: " + decodedFileName);
             amazonS3.deleteObject(bucket, decodedFileName);
@@ -127,11 +117,7 @@ public class FileStorageService {
     }
 
     public String updateFile(MultipartFile newFile, String oldFileName) throws IOException {
-        // 기존 파일 삭제
         deleteFile(oldFileName);
-        // 새 파일 업로드
         return store(newFile);
     }
 }
-
-

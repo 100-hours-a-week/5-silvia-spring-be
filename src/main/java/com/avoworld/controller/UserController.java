@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -99,8 +100,12 @@ public class UserController {
 
 
     @PostMapping("/check-email")
-    public boolean checkEmailDuplicate(@RequestBody Map<String, String> request) {
+    public Map<String, Boolean> checkEmailDuplicate(@RequestBody Map<String, String> request) {
         String email = request.get("email");
-        return userService.isEmailDuplicate(email);
+        boolean isDuplicate = userService.isEmailDuplicate(email);
+        Map<String, Boolean> response = new HashMap<>();
+        response.put("isDuplicate", isDuplicate);
+        return response;
     }
+
 }

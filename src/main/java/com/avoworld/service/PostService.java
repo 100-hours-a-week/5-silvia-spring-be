@@ -7,6 +7,7 @@ import com.avoworld.repository.CommentRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -35,20 +36,20 @@ public class PostService {
     }
 
     public void createPost(Post post, MultipartFile file) {
-        String fileName = fileStorageService.store(file);
-        String fileUrl = fileStorageService.getFileUrl(fileName);
-        post.setPostPicture(fileUrl);
+        if (file != null && !file.isEmpty()) {
+            String fileUrl = fileStorageService.store(file);
+            post.setPostPicture(fileUrl);
+        }
         postRepository.save(post);
     }
 
     public void updatePost(Post post, MultipartFile file) {
-        String fileName = fileStorageService.store(file);
-        String fileUrl = fileStorageService.getFileUrl(fileName);
-        post.setPostPicture(fileUrl);
+        if (file != null && !file.isEmpty()) {
+            String fileUrl = fileStorageService.store(file);
+            post.setPostPicture(fileUrl);
+        }
         postRepository.update(post);
     }
-
-
 
     public void updatePostWithoutFile(Post post, String postPicture) {
         if (postPicture != null && !postPicture.isEmpty()) {
@@ -70,6 +71,7 @@ public class PostService {
     }
 
     public void updateComment(Comment comment) {
+        comment.setUpdateAt(LocalDateTime.now());
         commentRepository.update(comment);
     }
 

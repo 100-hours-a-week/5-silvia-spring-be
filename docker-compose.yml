@@ -1,0 +1,41 @@
+services:
+  mysql:
+    image: mysql:latest
+#    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=7875
+      - MYSQL_DATABASE=community_db
+      - MYSQL_CHARSET=utf8mb4
+    ports:
+      - "3307:3306"
+    networks:
+      - avoworld_network
+    command:
+      - "mysqld"
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_unicode_ci"
+#    healthcheck:
+#      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+
+  app:
+    image: test:1.0.3
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/community_db?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&serverTimezone=Asia/Seoul
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=7875
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+#    restart:
+#      always
+    networks:
+      - avoworld_network
+
+networks:
+  avoworld_network:
+    driver: bridge
